@@ -55,6 +55,9 @@ const proxyHandler = {
     set(target, p, newValue, receiver) {
         const result = Reflect.set(target, p, newValue, receiver)
 
+        /* TODO Якщо викликати колбеки синхронно, то вони не бачать змін.
+         *      Треба розібратися, можливо я чогось не розумію.
+         */
         Promise.resolve().then(() => {
             callComputed(target, p, newValue)
         })
