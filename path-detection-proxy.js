@@ -39,6 +39,14 @@ const startPath = (target, prop, value, handler) => {
     return new Proxy(value, handler)
 }
 
+const canBeProxied = (value) => {
+    return typeof value === 'object' && value !== null /* typeof null === 'object' */
+}
+
+const skipProxy = (value) => {
+    return !canBeProxied(value)
+}
+
 export function createPathProxy(object, listener) {
     console.debug("#\n# Path Detection Proxy\n#")
 
@@ -51,7 +59,7 @@ export function createPathProxy(object, listener) {
             console.debug(`get ${p}`, pathStack)
             const value = Reflect.get(target, p, receiver)
 
-            if (typeof value !== 'object' || value === null) { /* typeof null === 'object' */
+            if (skipProxy(value)) {
                 if (target !== getContextObject()) {
                     console.debug('restart: got non-object')
                     pathStack = [] // this is property reading operation
@@ -75,10 +83,8 @@ export function createPathProxy(object, listener) {
             const result = Reflect.set(target, p, newValue, receiver)
 
             if (receiver === config.rootProxy) {
-                if (typeof newValue !== 'object' || newValue === null) { /* typeof null === 'object' */
-                    console.debug(`path: ${p} (1-level)`)
-                    listener(p)
-                }
+                console.debug(`path: ${p} (1-level)`)
+                listener(p)
             } else {
                 const path = getPath().concat([p])
                 console.debug(`path: ${path.join('.')}`)

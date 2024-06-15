@@ -4,6 +4,7 @@ import {createPathProxy} from "../path-detection-proxy.js";
 const tree = {
     id: 1,
     settings: {
+        callback: () => {},
         parent: null,
         foo: 'bar',
         options: {
@@ -20,6 +21,7 @@ const tree = {
         }
     ],
     parent: null,
+    callback: () => {}
 };
 
 describe('Path Detection Proxy', () => {
@@ -97,6 +99,51 @@ describe('Path Detection Proxy', () => {
         expect(listener).not.toHaveBeenCalled()
     })
 
+    it('get function', () => {
+        const listener = vi.fn()
+        const proxy = createPathProxy(tree, listener)
+
+        let _ = proxy.callback
+
+        expect(listener).not.toHaveBeenCalled()
+    })
+
+    it('get 2nd-level function', () => {
+        const listener = vi.fn()
+        const proxy = createPathProxy(tree, listener)
+
+        let _ = proxy.settings.callback
+
+        expect(listener).not.toHaveBeenCalled()
+    })
+
+    it('get function property', () => {
+        const listener = vi.fn()
+        const proxy = createPathProxy(tree, listener)
+
+        let _ = proxy.callback.name
+
+        expect(listener).not.toHaveBeenCalled()
+    })
+
+    it('call function', () => {
+        const listener = vi.fn()
+        const proxy = createPathProxy(tree, listener)
+
+        let _ = proxy.callback.call()
+
+        expect(listener).not.toHaveBeenCalled()
+    })
+
+    it('set function property', () => {
+        const listener = vi.fn()
+        const proxy = createPathProxy(tree, listener)
+
+        proxy.callback.prototype = {}
+
+        expect(listener).not.toHaveBeenCalled()
+    })
+
     it('set array property', () => {
         const listener = vi.fn()
         const proxy = createPathProxy(tree, listener)
@@ -105,6 +152,21 @@ describe('Path Detection Proxy', () => {
 
         expect(listener).toHaveBeenCalledTimes(1)
         expect(listener).toHaveBeenCalledWith('children.0.id')
+    })
+
+    it('set property which is object', () => {
+        const listener = vi.fn()
+        const proxy = createPathProxy(tree, listener)
+
+        proxy.settings = {
+            font: {
+                size: 100,
+                family: 'sans-serif',
+            }
+        }
+
+        expect(listener).toHaveBeenCalledTimes(1)
+        expect(listener).toHaveBeenCalledWith('settings')
     })
 
     it('overwrite item in array', () => {
@@ -148,10 +210,30 @@ describe('Path Detection Proxy', () => {
         const listener = vi.fn()
         const proxy = createPathProxy(tree, listener)
 
-        proxy.children[0].age = 10
+        proxy.noSuchProperty = 'test'
 
         expect(listener).toHaveBeenCalledTimes(1)
-        expect(listener).toHaveBeenCalledWith('children.0.age')
+        expect(listener).toHaveBeenCalledWith('noSuchProperty')
+    })
+
+    it('write nested non-existing property', () => {
+        const listener = vi.fn()
+        const proxy = createPathProxy(tree, listener)
+
+        proxy.settings.noSuchProperty = 'test'
+
+        expect(listener).toHaveBeenCalledTimes(1)
+        expect(listener).toHaveBeenCalledWith('settings.noSuchProperty')
+    })
+
+    it('write non-existing property of array item', () => {
+        const listener = vi.fn()
+        const proxy = createPathProxy(tree, listener)
+
+        proxy.children[0].noSuchProperty = 10
+
+        expect(listener).toHaveBeenCalledTimes(1)
+        expect(listener).toHaveBeenCalledWith('children.0.noSuchProperty')
     })
 
     it('read non-existing property', () => {
