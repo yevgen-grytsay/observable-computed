@@ -1,5 +1,6 @@
 import './style.css'
 import {makeDeepObservable, computed} from "./observable.js";
+import {createPathProxy} from "./path-detection-proxy.js";
 
 
 const nodes = makeDeepObservable([])
@@ -97,3 +98,33 @@ window.app = {
     reverse,
     larrySays,
 }
+
+
+const tree = {
+    id: 1,
+    settings: {
+        foo: 'bar',
+        options: {
+            font: {
+                size: 12,
+                family: 'monospaced',
+            }
+        }
+    },
+    children: [
+        {
+            id: 10,
+            name: 'Child #10',
+        }
+    ]
+};
+const rootProxy = createPathProxy(tree)
+
+let id = rootProxy.id
+rootProxy.settings.foo = 'new bar'
+rootProxy.id = 100
+rootProxy.settings.options.font.size = 24
+rootProxy.settings.options.font.family = 'serif'
+rootProxy.children[0].name += ' upd' // children.0.name.name
+
+import './delay-notification.js'
