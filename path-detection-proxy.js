@@ -28,7 +28,7 @@ const startPath = (target, prop, value, handler) => {
         console.error({message: 'Starting a new path stack but the tack is not empty', pathStack})
     }
 
-    if (typeof value !== 'object' || value === null) {
+    if (typeof value !== 'object' || value === null) { /* typeof null === 'object' */
         return value
     }
 
@@ -51,7 +51,7 @@ export function createPathProxy(object, listener) {
             console.debug(`get ${p}`, pathStack)
             const value = Reflect.get(target, p, receiver)
 
-            if (typeof value !== 'object' || value === null) {
+            if (typeof value !== 'object' || value === null) { /* typeof null === 'object' */
                 if (target !== getContextObject()) {
                     console.debug('restart: got non-object')
                     pathStack = [] // this is property reading operation
@@ -75,7 +75,7 @@ export function createPathProxy(object, listener) {
             const result = Reflect.set(target, p, newValue, receiver)
 
             if (receiver === config.rootProxy) {
-                if (typeof newValue !== 'object' || newValue === null) {
+                if (typeof newValue !== 'object' || newValue === null) { /* typeof null === 'object' */
                     console.debug(`path: ${p} (1-level)`)
                     listener(p)
                 }

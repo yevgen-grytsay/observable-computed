@@ -4,6 +4,7 @@ import {createPathProxy} from "../path-detection-proxy.js";
 const tree = {
     id: 1,
     settings: {
+        parent: null,
         foo: 'bar',
         options: {
             font: {
@@ -17,7 +18,8 @@ const tree = {
             id: 10,
             name: 'Child #10',
         }
-    ]
+    ],
+    parent: null,
 };
 
 describe('Path Detection Proxy', () => {
@@ -73,6 +75,24 @@ describe('Path Detection Proxy', () => {
         const proxy = createPathProxy(tree, listener)
 
         let _ = proxy.children[0].id
+
+        expect(listener).not.toHaveBeenCalled()
+    })
+
+    it('get null value', () => {
+        const listener = vi.fn()
+        const proxy = createPathProxy(tree, listener)
+
+        let _ = proxy.parent
+
+        expect(listener).not.toHaveBeenCalled()
+    })
+
+    it('get 2nd-level null value', () => {
+        const listener = vi.fn()
+        const proxy = createPathProxy(tree, listener)
+
+        let _ = proxy.settings.parent
 
         expect(listener).not.toHaveBeenCalled()
     })
