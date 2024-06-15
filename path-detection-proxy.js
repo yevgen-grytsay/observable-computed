@@ -54,7 +54,7 @@ const skipProxy = (value) => {
 }
 
 export function createPathProxy(object, listener) {
-    console.debug("#\n# Path Detection Proxy\n#")
+    // console.debug("#\n# Path Detection Proxy\n#")
 
     if (objectSet.has(object)) {
         throw new Error('Proxy for this object already exists')

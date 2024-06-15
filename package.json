@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tests": "vitest"
+    "test": "vitest",
+    "bench": "vitest bench --run"
   },
   "devDependencies": {
     "vite": "^5.2.0",
