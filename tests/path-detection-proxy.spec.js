@@ -1,30 +1,34 @@
-import { assert, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import {createPathProxy} from "../path-detection-proxy.js";
 
-const tree = {
-    id: 1,
-    settings: {
-        callback: () => {},
-        parent: null,
-        foo: 'bar',
-        options: {
-            font: {
-                size: 12,
-                family: 'monospaced',
-            }
-        }
-    },
-    children: [
-        {
-            id: 10,
-            name: 'Child #10',
-        }
-    ],
-    parent: null,
-    callback: () => {}
-};
+let tree = {}
 
 describe('Path Detection Proxy', () => {
+    beforeEach(() => {
+        tree = {
+            id: 1,
+            settings: {
+                callback: () => {},
+                parent: null,
+                foo: 'bar',
+                options: {
+                    font: {
+                        size: 12,
+                        family: 'monospaced',
+                    }
+                }
+            },
+            children: [
+                {
+                    id: 10,
+                    name: 'Child #10',
+                }
+            ],
+            parent: null,
+            callback: () => {}
+        };
+    })
+
     it('get 1st-level property', () => {
         const listener = vi.fn()
         const proxy = createPathProxy(tree, listener)
@@ -253,5 +257,24 @@ describe('Path Detection Proxy', () => {
         let b = proxy.children[0].noSuchProperty
 
         expect(listener).not.toHaveBeenCalled()
+    })
+
+    it.fails('do not wrap in a proxy if already wrapped', () => {
+        const listener = vi.fn()
+        const proxy_1 = createPathProxy(tree, listener)
+        createPathProxy(proxy_1, listener)
+    })
+
+    it('ignore symbols', () => {
+        const listener = vi.fn()
+        const proxy_1 = createPathProxy(tree, listener)
+
+        for (const item of proxy_1.children) {}
+    })
+
+    it.fails('can not create proxy for same object twice', () => {
+        const listener = vi.fn()
+        const proxy_1 = createPathProxy(tree, listener)
+        const proxy_2 = createPathProxy(tree, listener)
     })
 })

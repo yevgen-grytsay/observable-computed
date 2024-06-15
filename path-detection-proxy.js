@@ -1,5 +1,7 @@
 let pathStack = []
 let contextObj = new WeakRef({})
+let proxySet = new WeakSet()
+let objectSet = new WeakSet()
 /**
  * @returns {Array<String>}
  */
@@ -54,14 +56,27 @@ const skipProxy = (value) => {
 export function createPathProxy(object, listener) {
     console.debug("#\n# Path Detection Proxy\n#")
 
+    if (objectSet.has(object)) {
+        throw new Error('Proxy for this object already exists')
+    }
+
+    if (proxySet.has(object)) {
+        throw new Error('This object is already wrapped in a proxy')
+    }
+
     const config = {
         rootProxy: null,
     }
 
     const handler = {
         get(target, p, receiver) {
-            console.debug(`get ${p}`, pathStack)
             const value = Reflect.get(target, p, receiver)
+
+            if (typeof p === 'symbol') {
+                return value
+            }
+
+            console.debug(`get ${p}`, pathStack)
 
             if (skipProxy(value)) {
                 if (target !== getContextObject()) {
@@ -102,6 +117,10 @@ export function createPathProxy(object, listener) {
     const rootProxy = new Proxy(object, handler)
 
     config.rootProxy = rootProxy
+
+    objectSet.add(object)
+
+    proxySet.add(rootProxy)
 
     return rootProxy
 }

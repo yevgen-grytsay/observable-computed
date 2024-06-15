@@ -116,15 +116,29 @@ const tree = {
             id: 10,
             name: 'Child #10',
         }
-    ]
+    ],
+    callback: () => {}
 };
-const rootProxy = createPathProxy(tree)
+const rootProxy = createPathProxy(tree, () => {})
 
-let id = rootProxy.id
-rootProxy.settings.foo = 'new bar'
-rootProxy.id = 100
-rootProxy.settings.options.font.size = 24
-rootProxy.settings.options.font.family = 'serif'
-rootProxy.children[0].name += ' upd' // children.0.name.name
+// let id = rootProxy.id
+// rootProxy.settings.foo = 'new bar'
+// rootProxy.id = 100
+// rootProxy.settings.options.font.size = 24
+// rootProxy.settings.options.font.family = 'serif'
+// rootProxy.children[0].name += ' upd' // children.0.name.name
+// rootProxy.children[0].name = 'test name'
+/*rootProxy.children.push({
+    id: 2,
+    name: 'Child #2',
+})*/
+// rootProxy.callback.prototype = {}
 
-import './delay-notification.js'
+rootProxy.settings = {
+    font: {
+        size: 100,
+        family: 'sans-serif',
+    }
+}
+
+// import './delay-notification.js'
