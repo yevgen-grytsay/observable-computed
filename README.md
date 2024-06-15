@@ -1,30 +1,24 @@
 # Мої експерименти з ECMAScript 6 Proxy
 
-## Deep Observable
-Мої експерименти з `Proxy`.
-
-```javascript
-const nodes = makeDeepObservable([])
-
-computed(() => {
-    console.log(nodes)
-})
-
-nodes.push({
-    id: 1,
-    name: 'Node 1',
-})
-```
-
-### TODO
-- Подумати, може варто ігнорувати доступ до нерелевантних методів, типу `forEach`, `map` тощо.
-- Якщо викликати колбеки синхронно із функції `set` (`Proxy`), то вони не бачать змін. Треба розібратися, можливо я чогось не розумію.
-
-
 ## Path Detection Proxy
 Визначає шлях до поля, в яке здійснюється запис.
 ```javascript
-const proxy = createPathProxy(...)
+const tree = {
+  id: 100,
+  settings: {
+    foo: 'bar'
+  },
+  children: [
+    {
+      id: 1,
+      name: 'Child #1'
+    }
+  ],
+  callback: () => {}
+}
+const listener = (path) => {}
+
+const proxy = createPathProxy(tree, listener)
 
 proxy.id = 2 // path: id
 proxy.settings.foo = 'new bar' // path: settings.foo
@@ -48,20 +42,20 @@ proxy.callback.prototype = {} // ignored
 то проксі не включає до результуючого шляху `path` внутрішні шляхи цього об'єкта.
 ```javascript
 const tree = {
-    settings: {
-        font: {
-            size: 12,
-            family: 'monospaced',
-        }
-    },
+  settings: {
+    font: {
+      size: 12,
+      family: 'monospaced',
+    }
+  }
 }
 const proxy = createPathProxy(tree, listener)
 
 proxy.settings = {
-    font: {
-        size: 100,
-        family: 'sans-serif',
-    }
+  font: {
+    size: 100,
+    family: 'sans-serif',
+  }
 }
 // Отримаємо такий шлях: settings
 // Але не такий: settings.font.size, settings.font.family
@@ -87,3 +81,24 @@ proxy.children[0] = {id: 2, name: 'Child #2'} // path: children.0
 - надсилати слухачу нове і старе значення зміненої проксі.
 - додати тести, які б працювали з одним і тим же об'єктом проксі, щоб перевірити,
   чи не накопичуються помилки.
+
+---
+## Deep Observable
+Мої експерименти з `Proxy`.
+
+```javascript
+const nodes = makeDeepObservable([])
+
+computed(() => {
+  console.log(nodes)
+})
+
+nodes.push({
+  id: 1,
+  name: 'Node 1',
+})
+```
+
+### TODO
+- Подумати, може варто ігнорувати доступ до нерелевантних методів, типу `forEach`, `map` тощо.
+- Якщо викликати колбеки синхронно із функції `set` (`Proxy`), то вони не бачать змін. Треба розібратися, можливо я чогось не розумію.
