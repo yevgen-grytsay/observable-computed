@@ -19,6 +19,10 @@ const getContextObject = () => {
     return contextObj.deref()
 }
 
+const clearContextObject = () => {
+    contextObj = new WeakRef({})
+}
+
 const getPath = () => {
     return Array.from(pathStack)
 }
@@ -82,6 +86,7 @@ export function createPathProxy(object, listener) {
             console.debug(`set ${p}`, pathStack)
             const result = Reflect.set(target, p, newValue, receiver)
 
+            clearContextObject()
             if (receiver === config.rootProxy) {
                 console.debug(`path: ${p} (1-level)`)
                 listener(p)
