@@ -1,37 +1,21 @@
 let pathStack = []
+let contextObj = null // todo weak ref
 /**
  * @returns {Array<String>}
  */
 const popPath = () => {
-    const path = Array.from(pathStack);
+    const path = Array.from(pathStack)
+    console.log('restart: pop path')
     pathStack = []
 
     return path
 }
 
-const pathProxyHandler = {
-    get(target, p, receiver) {
-        const value = Reflect.get(target, p, receiver)
+const getPath = () => {
+    return Array.from(pathStack)
+}
 
-        pathStack.push(p)
-
-        if (typeof value !== 'object' || value === null) {
-            return
-        }
-
-        return new Proxy(value, pathProxyHandler)
-    },
-    set(target, p, newValue, receiver) {
-        const result = Reflect.set(target, p, newValue, receiver)
-
-        const path = popPath().concat([p])
-        console.log(`path: ${path.join('.')}`)
-
-        return result
-    }
-};
-
-const startPath = (prop, value) => {
+const startPath = (target, prop, value, handler) => {
     if (pathStack.length > 0) {
         console.error({message: 'Starting a new path stack but the tack is not empty', pathStack})
     }
@@ -40,33 +24,65 @@ const startPath = (prop, value) => {
         return value
     }
 
+    console.log('restart: start path')
     pathStack = [prop]
+    contextObj = value
 
-    return new Proxy(value, pathProxyHandler)
+    return new Proxy(value, handler)
 }
 
-export function createPathProxy(object) {
+export function createPathProxy(object, listener) {
     console.log("#\n# Path Detection Proxy\n#")
 
-    const rootProxy = new Proxy(object, {
+    const config = {
+        rootProxy: null,
+    }
+
+    const handler = {
         get(target, p, receiver) {
-            let value = Reflect.get(target, p, receiver)
-            if (receiver !== rootProxy) { // todo can it be true?
+            console.debug(`get ${p}`, pathStack)
+            const value = Reflect.get(target, p, receiver)
+
+            if (typeof value !== 'object' || value === null) {
+                if (target !== contextObj) {
+                    console.log('restart: got non-object')
+                    pathStack = [] // this is property reading operation
+                    contextObj = target
+                }
+
                 return value
             }
 
-            return startPath(p, value)
+            if (receiver === config.rootProxy) {
+                return startPath(target, p, value, handler)
+            } else {
+                contextObj = value
+                pathStack.push(p)
+            }
+
+            return new Proxy(value, handler)
         },
         set(target, p, newValue, receiver) {
+            console.debug(`set ${p}`, pathStack)
             const result = Reflect.set(target, p, newValue, receiver)
 
-            if (typeof newValue !== 'object' || newValue === null) {
-                console.log(`path: ${p} (1-level)`)
+            if (receiver === config.rootProxy) {
+                if (typeof newValue !== 'object' || newValue === null) {
+                    console.log(`path: ${p} (1-level)`)
+                    listener(p)
+                }
+            } else {
+                const path = getPath().concat([p])
+                console.log(`path: ${path.join('.')}`)
+                listener(path.join('.'))
             }
 
             return result
         }
-    })
+    };
+    const rootProxy = new Proxy(object, handler)
+
+    config.rootProxy = rootProxy
 
     return rootProxy
 }
