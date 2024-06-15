@@ -1,14 +1,22 @@
 let pathStack = []
-let contextObj = null // todo weak ref
+let contextObj = new WeakRef({})
 /**
  * @returns {Array<String>}
  */
 const popPath = () => {
     const path = Array.from(pathStack)
-    console.log('restart: pop path')
+    console.debug('restart: pop path')
     pathStack = []
 
     return path
+}
+
+const setContextObject = (object) => {
+    contextObj = new WeakRef(object)
+}
+
+const getContextObject = () => {
+    return contextObj.deref()
 }
 
 const getPath = () => {
@@ -24,15 +32,15 @@ const startPath = (target, prop, value, handler) => {
         return value
     }
 
-    console.log('restart: start path')
+    console.debug('restart: start path')
     pathStack = [prop]
-    contextObj = value
+    setContextObject(value)
 
     return new Proxy(value, handler)
 }
 
 export function createPathProxy(object, listener) {
-    console.log("#\n# Path Detection Proxy\n#")
+    console.debug("#\n# Path Detection Proxy\n#")
 
     const config = {
         rootProxy: null,
@@ -44,10 +52,10 @@ export function createPathProxy(object, listener) {
             const value = Reflect.get(target, p, receiver)
 
             if (typeof value !== 'object' || value === null) {
-                if (target !== contextObj) {
-                    console.log('restart: got non-object')
+                if (target !== getContextObject()) {
+                    console.debug('restart: got non-object')
                     pathStack = [] // this is property reading operation
-                    contextObj = target
+                    setContextObject(target)
                 }
 
                 return value
@@ -56,7 +64,7 @@ export function createPathProxy(object, listener) {
             if (receiver === config.rootProxy) {
                 return startPath(target, p, value, handler)
             } else {
-                contextObj = value
+                setContextObject(value)
                 pathStack.push(p)
             }
 
@@ -68,12 +76,12 @@ export function createPathProxy(object, listener) {
 
             if (receiver === config.rootProxy) {
                 if (typeof newValue !== 'object' || newValue === null) {
-                    console.log(`path: ${p} (1-level)`)
+                    console.debug(`path: ${p} (1-level)`)
                     listener(p)
                 }
             } else {
                 const path = getPath().concat([p])
-                console.log(`path: ${path.join('.')}`)
+                console.debug(`path: ${path.join('.')}`)
                 listener(path.join('.'))
             }
 
