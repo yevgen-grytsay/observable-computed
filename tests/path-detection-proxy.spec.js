@@ -265,11 +265,19 @@ describe('Path Detection Proxy', () => {
         createPathProxy(proxy_1, listener)
     })
 
-    it('ignore symbols', () => {
+    it('ignore symbols read', () => {
         const listener = vi.fn()
         const proxy_1 = createPathProxy(tree, listener)
 
         for (const item of proxy_1.children) {}
+    })
+
+    it('ignore symbols write', () => {
+        const listener = vi.fn()
+        const proxy_1 = createPathProxy(tree, listener)
+
+        const key = Symbol('some_key');
+        proxy_1.settings[key] = 'value'
     })
 
     it.fails('can not create proxy for same object twice', () => {

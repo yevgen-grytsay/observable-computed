@@ -98,8 +98,13 @@ export function createPathProxy(object, listener) {
             return new Proxy(value, handler)
         },
         set(target, p, newValue, receiver) {
-            console.debug(`set ${p}`, pathStack)
             const result = Reflect.set(target, p, newValue, receiver)
+
+            if (typeof p === 'symbol') {
+                return result
+            }
+
+            console.debug(`set ${p}`, pathStack)
 
             clearContextObject()
             if (receiver === config.rootProxy) {
