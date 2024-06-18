@@ -285,4 +285,16 @@ describe('Path Detection Proxy', () => {
         const proxy_1 = createPathProxy(tree, listener)
         const proxy_2 = createPathProxy(tree, listener)
     })
+
+    it('set property on direct link', () => {
+        const listener = vi.fn()
+        const proxy = createPathProxy(tree, listener)
+
+        const settings = proxy.settings
+        const children = proxy.children
+
+        settings.foo = 'new foo'
+        expect(listener).toHaveBeenCalledTimes(1)
+        expect(listener).toHaveBeenNthCalledWith(1, 'children.foo')
+    })
 })
