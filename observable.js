@@ -72,6 +72,20 @@ const registerAccess = (target, p) => {
     })
 }*/
 
+const makeAndRegisterObservable = (value) => {
+    if (typeof value === 'object' && value !== null) {
+        let proxy = rawToProxy.get(value)
+        if (typeof proxy === 'undefined') {
+            proxy = makeObservable(value)
+            rawToProxy.set(value, proxy)
+        }
+
+        return proxy
+    }
+
+    return value
+}
+
 const proxyHandler = {
     get(target, p, receiver) {
         const value = Reflect.get(target, p, receiver)
@@ -82,17 +96,7 @@ const proxyHandler = {
             key: p,
         })
 
-        if (typeof value === 'object' && value !== null) {
-            let proxy = rawToProxy.get(value)
-            if (typeof proxy === 'undefined') {
-                proxy = makeObservable(value)
-                rawToProxy.set(value, proxy)
-            }
-
-            return proxy
-        }
-
-        return value
+        return makeAndRegisterObservable(value)
     },
     set(target, p, newValue, receiver) {
         const result = Reflect.set(target, p, newValue, receiver)
@@ -102,6 +106,17 @@ const proxyHandler = {
         // Promise.resolve().then(() => {
         //     callComputed(target, p, newValue)
         // })
+
+        return result
+    },
+    has(target, p) {
+        const result = Reflect.has(target, p)
+
+        registerAccess(target, p)
+        getPropStack.push({
+            target,
+            key: p,
+        })
 
         return result
     }

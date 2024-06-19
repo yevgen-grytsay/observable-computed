@@ -9,7 +9,17 @@ describe('Observable Tests', () => {
             counter: 0,
             nodes: {
                 children: []
-            }
+            },
+            users: [
+                {
+                    id: 1,
+                    name: 'Alice',
+                },
+                {
+                    id: 2,
+                    name: 'Bob',
+                },
+            ]
         }
     })
 
@@ -85,5 +95,93 @@ describe('Observable Tests', () => {
             {id: 1, name: 'Node #1'},
             {id: 2, name: 'Node #2'}
         ])
+    })
+
+    it('replace array item', async () => {
+        const data = makeObservable(testData)
+        let value = []
+        const config = {
+            onChange() {
+                value = []
+                data.users.forEach(item => {
+                    value.push(item)
+                })
+            }
+        }
+        const listener = vi.spyOn(config, 'onChange')
+
+        makeObserver(listener)
+        expect(listener).toBeCalledTimes(1)
+
+        data.users[1] = {
+            id: 4,
+            name: 'Dean',
+        }
+        expect(listener).toBeCalledTimes(1)
+
+        const result = await vi.waitFor(() => {
+            expect(listener).toBeCalledTimes(2)
+
+            return value
+        })
+    })
+
+    it('push to array', async () => {
+        const data = makeObservable(testData)
+        let value = []
+        const config = {
+            onChange() {
+                data.users.forEach(item => {
+                    value.push(item)
+                })
+            }
+        }
+        const listener = vi.spyOn(config, 'onChange')
+
+        makeObserver(listener)
+        expect(listener).toBeCalledTimes(1)
+
+        data.users.push({
+            id: 4,
+            name: 'Dean'
+        })
+        expect(listener).toBeCalledTimes(1)
+
+        const result = await vi.waitFor(() => {
+            expect(listener).toBeCalledTimes(2)
+        })
+
+        expect(value).toStrictEqual([
+            {id: 1, name: 'Alice'},
+            {id: 2, name: 'Bob'},
+            {id: 1, name: 'Alice'},
+            {id: 2, name: 'Bob'},
+            {id: 4, name: 'Dean'},
+        ])
+    })
+
+    // todo fix
+    it.skip('update array item', async () => {
+        const data = makeObservable(testData)
+        let value = []
+        const config = {
+            onChange() {
+                value = []
+                data.users.forEach(item => {
+                    value.push(item)
+                })
+            }
+        }
+        const listener = vi.spyOn(config, 'onChange')
+
+        makeObserver(listener)
+        expect(listener).toBeCalledTimes(1)
+
+        data.users[1].name = 'Charlie'
+        expect(listener).toBeCalledTimes(1)
+
+        await vi.waitFor(() => {
+            expect(listener).toBeCalledTimes(2)
+        })
     })
 })
