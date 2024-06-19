@@ -108,21 +108,26 @@ proxy.children[0] = {id: 2, name: 'Child #2'} // path: children.0
   чи не накопичуються помилки.
 
 ---
-## Deep Observable
+## Observable/Observer
 Мої експерименти з `Proxy`.
 
 ```javascript
-const nodes = makeDeepObservable([])
+const nodes = makeObservable([])
 
-computed(() => {
-  console.log(nodes)
+makeObserver(() => {
+    console.log(nodes)
 })
 
 nodes.push({
-  id: 1,
-  name: 'Node 1',
+    id: 1,
+    name: 'Node 1',
 })
 ```
+
+### Особливості
+- Виклик `makeObserver()` одразу запускає передану йому функцію.
+- Імовірно є певні обмеження на використання умовного оператора `if`, через що
+  деякі зміни можуть не відслідковуватися.
 
 ### TODO
 - Подумати, може варто ігнорувати доступ до нерелевантних методів, типу `forEach`, `map` тощо.
