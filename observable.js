@@ -28,7 +28,10 @@ export const debug = {
         this.byTarget.forEach((byKey, target) => {
             const parts = []
             byKey.forEach((handlers, key) => {
-                const handlerIds = Array.from(handlers.values()).map(h => h._id || h.role)
+                if (typeof key === 'symbol') {
+                    key = '<symbol>'
+                }
+                const handlerIds = Array.from(handlers.values()).map(h => h.role)
                 parts.push(`${key}=${handlerIds.join(',')}`)
             })
             result.push(`${JSON.stringify(target)}: ${parts.join('; ')}`)
@@ -114,6 +117,8 @@ const registerAccess = (target, p) => {
     const configs = observerStackStack[stackLevel] ?? []
     const {fnc} = configs.length > 0 ? configs[configs.length - 1] : {fnc: null}
     fnc && computed.add(fnc)
+
+    fnc && debug.add(fnc, target, p)
 
     computedByKey.set(p, computed)
     computedByTarget.set(target, computedByKey)
