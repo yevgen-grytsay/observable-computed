@@ -114,7 +114,7 @@ const proxyHandler = {
  * @template T
  *
  * @param {T} obj
- * @returns {Proxy<T>}
+ * @returns {Proxy<T>|T}
  */
 export function makeObservable(obj) {
     return new Proxy(obj, proxyHandler)
