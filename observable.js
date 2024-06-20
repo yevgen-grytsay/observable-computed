@@ -5,6 +5,22 @@ let propAccessStackStack = []
 /*const debug = {
     computedMap: new Map()
 }*/
+
+const oStack = {
+    stack: [],
+    store: [],
+    push(descriptor) {
+        this.stack.push(descriptor)
+    },
+    pop() {
+        const descriptor = this.stack.pop()
+        this.store.push(descriptor)
+    }
+}
+function oPush({}) {
+    oStack.p
+}
+
 export const debug = {
     byTarget: new Map(),
     start() {
@@ -75,7 +91,7 @@ const pushToPropAccessStack = ({target, key}) => {
 
 let computedByTarget = new WeakMap()
 
-let unregisteredSet = new Set()
+let unregisteredSet = new Set() // todo make weak
 let handlerQueue = new Set()
 const enqueueComputed = (target, p) => {
     // if target is proxy
@@ -143,20 +159,28 @@ const registerAccess = (target, p) => {
     // console.log({debug})
 }
 
-let observerStackStack = [[]]
+let observerStackStack = []
+let stackLevel = -1
 function startNewObserverStack() {
-    observerStackStack.push([])
+    if (observerStackStack.length < (stackLevel + 2)) {
+        observerStackStack.push([])
+    }
+
+    stackLevel++
 }
 
 function endObserverStack() {
-    return observerStackStack.pop()
+    const level = stackLevel
+    stackLevel--
+
+    return observerStackStack[level]
 }
 
 function pushToObserverStack(fnc) {
     // if (observerStackStack.length === 0) {
     //     return
     // }
-    observerStackStack[observerStackStack.length - 1].push(fnc)
+    observerStackStack[stackLevel].push(fnc)
 }
 
 /**
@@ -241,56 +265,63 @@ const runComputed = (fnc) => {
     })
     fnc.nestedObservers = []
 
-    pushToObserverStack(fnc)
+    /*if (unregisteredSet.has(fnc)) {
+        return
+    }*/
+    const config = {
+        fnc
+    }
+
+    pushToObserverStack(config)
 
     startNewPropAccessStack()
-    startNewObserverStack()
     fnc()
-    const childObservers = endObserverStack()
     const dependencies = endPropAccessStack()
 
-    fnc.nestedObservers = childObservers
+    config.init = () => {
+        dependencies.forEach(({target, key}) => {
+            const computedByKey = computedByTarget.get(target) || new Map()
+            const computedSet = computedByKey.get(key) || new Set()
 
-    dependencies.forEach(({target, key}) => {
-        const computedByKey = computedByTarget.get(target) || new Map()
-        const computedSet = computedByKey.get(key) || new Set()
+            computedSet.add(fnc)
 
-        computedSet.add(fnc)
+            computedByKey.set(key, computedSet)
 
-        computedByKey.set(key, computedSet)
+            computedByTarget.set(target, computedByKey)
 
-        computedByTarget.set(target, computedByKey)
+            fnc.cleaners = fnc.cleaners || []
+            fnc.cleaners.push(() => {
+                // console.log(`delete listener for ${fnc.role}, key=${key}`)
+                computedSet.delete(fnc)
+                unregisteredSet.add(fnc)
+            })
 
-        fnc.cleaners = fnc.cleaners || []
-        fnc.cleaners.push(() => {
-            console.log(`delete listener for ${fnc.role}, key=${key}`)
-            computedSet.delete(fnc)
-            // unregisteredSet.add(fnc)
+            debug.add(fnc, target, key)
         })
-
-        debug.add(fnc, target, key)
-        /*let targets = debug.computedMap.get(fnc)
-        if (!targets) {
-            targets = new Map()
-        }
-        let props = targets.get(target)
-        if (!props) {
-            props = new Set()
-        }
-        props.add(key)
-
-        targets.set(target, props)
-        debug.computedMap.set(fnc, targets)
-        console.log({computedMap: debug.computedMap})*/
-    })
+    }
 }
 
 /**
  * @param {function} fnc
  */
 export function makeObserver(fnc) {
-    observerStackStack = [[]]
+    startNewObserverStack()
     runComputed(fnc)
+
+
+    const childObservers = observerStackStack.length >= (stackLevel + 2) ? observerStackStack[stackLevel + 1] : []
+    fnc.nestedObservers = childObservers.map(o => o.fnc)
+    // stackLevel--
+
+    if (stackLevel === 0) {
+        const stack = [...observerStackStack]
+        stack.flat().forEach(({init}) => {
+            init()
+        })
+        observerStackStack = []
+    }
+
+    stackLevel--
 }
 
 export function handleQueue() {

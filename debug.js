@@ -24,10 +24,13 @@ const data = makeObservable({
 
 const rootFnc = () => {
     console.log('#1')
-    const names = data.settings.users.map(u => u.name)
+    // const names = data.settings.users.map(u => u.name)
+    data.settings.users.forEach(u => {
+        const a = u.name
+    })
     // console.log(names)
     const fnc = () => {
-        const name = data.settings.users[0].name
+        const name = data.settings.users[0]?.name
         console.log(`#2 ${fnc.role}`, name)
     };
     fnc.role = `child-${getChildNo()}`
@@ -48,14 +51,15 @@ makeObserver(rootFnc)
 console.log("\n-=[ start ]=-")
 console.log("-=[ step #1 ]=-\n")
 
-data.settings.users = [...data.settings.users]
+data.settings.users = [data.settings.users[0]]
+// data.settings.users = [...data.settings.users]
 // data.settings.users = [...data.settings.users]
 // data.settings.users = [...data.settings.users]
 // data.settings.users = [...data.settings.users]
 handleQueue()
 
-console.log("\n-=[ step #2 ]=-\n")
-data.settings.users[0].name = `Name ${Date.now()}`
+// console.log("\n-=[ step #2 ]=-\n")
+// data.settings.users[0].name = `Name ${Date.now()}`
 // data.settings.users[0].name = `Name ${Date.now()}`
 // data.settings.users[0].name = `Name ${Date.now()}`
 // data.settings.users[0].name = `Name ${Date.now()}`

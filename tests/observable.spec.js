@@ -55,14 +55,19 @@ describe('Observable Tests', () => {
         data.counter = 10
         expect(listener).toBeCalledTimes(1)
 
-        await vi.waitFor(() => {
+        handleQueue()
+        expect(listener).toBeCalledTimes(2)
+        expect(value).toBe(10)
+
+        /*await vi.waitFor(() => {
             expect(listener).toBeCalledTimes(2)
             expect(value).toBe(10)
             console.debug({value})
-        })
+        })*/
     })
 
     it('listener detached array', async () => {
+        debug.start()
         const data = makeObservable(testData)
         let value = []
         const config = {
@@ -87,11 +92,16 @@ describe('Observable Tests', () => {
         children.push({id: 1, name: 'Node #1'})
         children.push({id: 2, name: 'Node #2'})
 
-        const actual = await vi.waitFor(() => {
+
+        const debugStr = `${debug}`;
+        console.log(debugStr)
+        handleQueue()
+        const actual = value
+        /*const actual = await vi.waitFor(() => {
             expect(listener).toBeCalledTimes(2)
 
             return value
-        })
+        })*/
 
         expect(actual).toStrictEqual([
             {id: 1, name: 'Node #1'},
@@ -411,7 +421,7 @@ describe('Observable Tests', () => {
             data.users = [...data.users]
             handleQueue()
             expect(rootSpy).toBeCalledTimes(2)
-            expect(nestedSpy).toBeCalledTimes(4) // todo oops, looks like we called the old nested function too
+            expect(nestedSpy).toBeCalledTimes(3) // todo oops, looks like we called the old nested function too
         })
     })
 
@@ -439,7 +449,7 @@ describe('Observable Tests', () => {
             data.users = [...data.users]
             handleQueue()
             expect(rootSpy).toBeCalledTimes(2)
-            expect(nestedSpy).toBeCalledTimes(3)
+            expect(nestedSpy).toBeCalledTimes(2)
 
             /*data.users = [...data.users]
             expect(rootSpy).toBeCalledTimes(2)
@@ -486,8 +496,8 @@ describe('Observable Tests', () => {
             console.debug(`${debug}`)
             expect(spies).length(2)
             expect(rootSpy).toBeCalledTimes(2)
-            expect(spies[0]).toBeCalledTimes(1)
             expect(spies[1]).toBeCalledTimes(1)
+            expect(spies[0]).toBeCalledTimes(1)
 
             /*data.users = [...data.users]
             expect(rootSpy).toBeCalledTimes(2)
