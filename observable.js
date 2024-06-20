@@ -16,7 +16,7 @@ const endStack = () => {
 const computedByTarget = new WeakMap()
 
 let handlerQueue = new Set()
-const enqueueComputed = (target, p, newValue) => {
+const enqueueComputed = (target, p) => {
     const computedByKey = computedByTarget.get(target)
     if (!computedByKey) {
         return
@@ -27,7 +27,6 @@ const enqueueComputed = (target, p, newValue) => {
         return
     }
 
-    // handlerQueue = handlerQueue.union(computed)
     handlerQueue = new Set([...handlerQueue, ...computed])
 }
 const handleComputedQueue = () => {
@@ -39,7 +38,10 @@ const handleComputedQueue = () => {
     })
 }
 
-
+/**
+ * @param {object} target
+ * @param {string|symbol} p
+ */
 const registerAccess = (target, p) => {
     let computedByKey = computedByTarget.get(target)
     if (!computedByKey) {
@@ -55,35 +57,24 @@ const registerAccess = (target, p) => {
     computedByTarget.set(target, computedByKey)
 }
 
-/*const callComputed = (target, p, newValue) => {
-    const computedByKey = computedByTarget.get(target)
-    if (!computedByKey) {
-        return
-    }
-
-    const computed = computedByKey.get(p)
-    if (!computed) {
-        return
-    }
-
-    console.log({reactions: computed.size})
-    computed.forEach(fnc => {
-        runComputed(fnc)
-    })
-}*/
-
+/**
+ * @template T
+ *
+ * @param {T} value
+ * @returns {Proxy<T>|T}
+ */
 const makeAndRegisterObservable = (value) => {
-    if (typeof value === 'object' && value !== null) {
-        let proxy = rawToProxy.get(value)
-        if (typeof proxy === 'undefined') {
-            proxy = makeObservable(value)
-            rawToProxy.set(value, proxy)
-        }
-
-        return proxy
+    if (typeof value !== 'object' || value === null) {
+        return value
     }
 
-    return value
+    let proxy = rawToProxy.get(value)
+    if (!proxy) {
+        proxy = makeObservable(value)
+        rawToProxy.set(value, proxy)
+    }
+
+    return proxy
 }
 
 const proxyHandler = {
@@ -101,11 +92,8 @@ const proxyHandler = {
     set(target, p, newValue, receiver) {
         const result = Reflect.set(target, p, newValue, receiver)
 
-        enqueueComputed(target, p, newValue)
+        enqueueComputed(target, p)
         Promise.resolve().then(handleComputedQueue)
-        // Promise.resolve().then(() => {
-        //     callComputed(target, p, newValue)
-        // })
 
         return result
     },
@@ -126,13 +114,15 @@ const proxyHandler = {
  * @template T
  *
  * @param {T} obj
- * @returns {T}
+ * @returns {Proxy<T>}
  */
 export function makeObservable(obj) {
     return new Proxy(obj, proxyHandler)
 }
 
-
+/**
+ * @param {function} fnc
+ */
 const runComputed = (fnc) => {
     startStack()
     fnc()
@@ -150,6 +140,9 @@ const runComputed = (fnc) => {
     })
 }
 
+/**
+ * @param {function} fnc
+ */
 export function makeObserver(fnc) {
     runComputed(fnc)
 }

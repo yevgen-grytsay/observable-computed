@@ -53,6 +53,7 @@ describe('Observable Tests', () => {
         expect(value).toBe(0)
 
         data.counter = 10
+        expect(listener).toBeCalledTimes(1)
 
         await vi.waitFor(() => {
             expect(listener).toBeCalledTimes(2)
@@ -81,6 +82,7 @@ describe('Observable Tests', () => {
 
         const children = data.nodes.children
         const counter = data.counter
+        expect(listener).toBeCalledTimes(1)
 
         children.push({id: 1, name: 'Node #1'})
         children.push({id: 2, name: 'Node #2'})
@@ -160,15 +162,13 @@ describe('Observable Tests', () => {
         ])
     })
 
-    // todo fix
-    it.skip('update array item', async () => {
+    it('update array item', async () => {
         const data = makeObservable(testData)
         let value = []
         const config = {
             onChange() {
-                value = []
                 data.users.forEach(item => {
-                    value.push(item)
+                    value.push(item.name)
                 })
             }
         }
@@ -180,8 +180,17 @@ describe('Observable Tests', () => {
         data.users[1].name = 'Charlie'
         expect(listener).toBeCalledTimes(1)
 
-        await vi.waitFor(() => {
+        const result = await vi.waitFor(() => {
             expect(listener).toBeCalledTimes(2)
+
+            return value
         })
+
+        expect(value).toStrictEqual([
+            'Alice',
+            'Bob',
+            'Alice',
+            'Charlie',
+        ])
     })
 })
