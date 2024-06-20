@@ -193,4 +193,96 @@ describe('Observable Tests', () => {
             'Charlie',
         ])
     })
+
+    it('replace object in root property', async () => {
+        const data = makeObservable({
+            tree: {
+                nodes: [
+                    {id: 1, name: 'Node #1'},
+                    {id: 2, name: 'Node #2'},
+                ]
+            }
+        })
+        let value = []
+        const config = {
+            onChange() {
+                data.tree.nodes.forEach(item => {
+                    value.push(item.name)
+                })
+            }
+        }
+        const listener = vi.spyOn(config, 'onChange')
+
+        makeObserver(listener)
+        expect(listener).toBeCalledTimes(1)
+
+        expect(value).toStrictEqual([
+            'Node #1',
+            'Node #2',
+        ])
+
+        data.tree = {
+            nodes: [
+                {id: 3, name: 'Node #3'},
+                {id: 4, name: 'Node #4'},
+            ]
+        }
+        const result = await vi.waitFor(() => {
+            expect(listener).toBeCalledTimes(2)
+
+            return value
+        })
+        expect(result).toStrictEqual([
+            'Node #1',
+            'Node #2',
+            'Node #3',
+            'Node #4',
+        ])
+    })
+
+    it('replace object in root property #2', async () => {
+        const data = makeObservable({
+            tree: {
+                nodes: [
+                    {id: 1, name: 'Node #1'},
+                    {id: 2, name: 'Node #2'},
+                ]
+            }
+        })
+        let value = []
+        const config = {
+            onChange() {
+                data.tree.nodes.forEach(item => {
+                    value.push(item)
+                })
+            }
+        }
+        const listener = vi.spyOn(config, 'onChange')
+
+        makeObserver(listener)
+        expect(listener).toBeCalledTimes(1)
+
+        expect(value).toStrictEqual([
+            {id: 1, name: 'Node #1'},
+            {id: 2, name: 'Node #2'},
+        ])
+
+        data.tree = {
+            nodes: [
+                {id: 3, name: 'Node #3'},
+                {id: 4, name: 'Node #4'},
+            ]
+        }
+        const result = await vi.waitFor(() => {
+            expect(listener).toBeCalledTimes(2)
+
+            return value
+        })
+        expect(result).toStrictEqual([
+            {id: 1, name: 'Node #1'},
+            {id: 2, name: 'Node #2'},
+            {id: 3, name: 'Node #3'},
+            {id: 4, name: 'Node #4'},
+        ])
+    })
 })
