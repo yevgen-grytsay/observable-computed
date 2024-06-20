@@ -1,22 +1,38 @@
 
 const rawToProxy = new WeakMap()
-let getPropStack = []
+const proxyToRaw = new WeakMap()
+let propAccessStackStack = []
+/*const debug = {
+    computedMap: new Map()
+}*/
 
-const startStack = () => {
-    getPropStack = []
+const startNewPropAccessStack = () => {
+    propAccessStackStack.push([])
 }
 
-const endStack = () => {
-    const result = Array.from(getPropStack)
-    getPropStack = []
-
-    return result
+const endPropAccessStack = () => {
+    return Array.from(propAccessStackStack.pop())
 }
 
-const computedByTarget = new WeakMap()
+const pushToPropAccessStack = ({target, key}) => {
+    if (proxyToRaw.has(target)) {
+        target = proxyToRaw.get(target)
+    }
+    if (propAccessStackStack.length === 0) {
+        return
+    }
+    propAccessStackStack[propAccessStackStack.length - 1].push({target, key})
+}
+
+let computedByTarget = new WeakMap()
 
 let handlerQueue = new Set()
 const enqueueComputed = (target, p) => {
+    // if target is proxy
+    if (proxyToRaw.has(target)) {
+        target = proxyToRaw.get(target)
+    }
+
     const computedByKey = computedByTarget.get(target)
     if (!computedByKey) {
         return
@@ -43,6 +59,11 @@ const handleComputedQueue = () => {
  * @param {string|symbol} p
  */
 const registerAccess = (target, p) => {
+    // if target is proxy
+    if (proxyToRaw.has(target)) {
+        target = proxyToRaw.get(target)
+    }
+
     let computedByKey = computedByTarget.get(target)
     if (!computedByKey) {
         computedByKey = new Map()
@@ -55,6 +76,30 @@ const registerAccess = (target, p) => {
 
     computedByKey.set(p, computed)
     computedByTarget.set(target, computedByKey)
+
+    // computed.forEach(cmp => {
+    //     const targets = debug.computedMap.get(cmp)
+    //     if (targets) {
+    //         targets.push({target, p})
+    //     }
+    // })
+    // console.log({debug})
+}
+
+let observerStackStack = []
+function startNewObserverStack() {
+    observerStackStack.push([])
+}
+
+function endObserverStack() {
+    return observerStackStack.pop()
+}
+
+function pushToObserverStack(fnc) {
+    if (observerStackStack.length === 0) {
+        return
+    }
+    observerStackStack[observerStackStack.length - 1].push(fnc)
 }
 
 /**
@@ -73,21 +118,25 @@ const makeAndRegisterObservable = (value) => {
         proxy = makeObservable(value)
         rawToProxy.set(value, proxy)
     }
+    proxyToRaw.set(proxy, value)
 
     return proxy
 }
 
 const proxyHandler = {
     get(target, p, receiver) {
-        const value = Reflect.get(target, p, receiver)
+        let value = Reflect.get(target, p, receiver)
 
+        value = makeAndRegisterObservable(value)
+
+        // registerAccess and pushToPropAccessStack must be called after makeAndRegisterObservable
         registerAccess(target, p)
-        getPropStack.push({
+        pushToPropAccessStack({
             target,
             key: p,
         })
 
-        return makeAndRegisterObservable(value)
+        return value
     },
     set(target, p, newValue, receiver) {
         const result = Reflect.set(target, p, newValue, receiver)
@@ -101,7 +150,7 @@ const proxyHandler = {
         const result = Reflect.has(target, p)
 
         registerAccess(target, p)
-        getPropStack.push({
+        pushToPropAccessStack({
             target,
             key: p,
         })
@@ -124,9 +173,25 @@ export function makeObservable(obj) {
  * @param {function} fnc
  */
 const runComputed = (fnc) => {
-    startStack()
+    fnc.nestedObservers = fnc.nestedObservers || []
+    fnc.nestedObservers.forEach(nestedFnc => {
+        nestedFnc.cleaners.forEach(clean => {
+            const msg = `running ${fnc.role} child's cleaners`
+            console.log(msg)
+            clean()
+        })
+    })
+    fnc.nestedObservers = []
+
+    pushToObserverStack(fnc)
+
+    startNewPropAccessStack()
+    startNewObserverStack()
     fnc()
-    const dependencies = endStack()
+    const childObservers = endObserverStack()
+    const dependencies = endPropAccessStack()
+
+    fnc.nestedObservers = childObservers
 
     dependencies.forEach(({target, key}) => {
         const computedByKey = computedByTarget.get(target) || new Map()
@@ -137,6 +202,26 @@ const runComputed = (fnc) => {
         computedByKey.set(key, computedSet)
 
         computedByTarget.set(target, computedByKey)
+
+        fnc.cleaners = fnc.cleaners || []
+        fnc.cleaners.push(() => {
+            console.log(`delete listener for ${fnc.role}`)
+            computedSet.delete(fnc)
+        })
+
+        /*let targets = debug.computedMap.get(fnc)
+        if (!targets) {
+            targets = new Map()
+        }
+        let props = targets.get(target)
+        if (!props) {
+            props = new Set()
+        }
+        props.add(key)
+
+        targets.set(target, props)
+        debug.computedMap.set(fnc, targets)
+        console.log({computedMap: debug.computedMap})*/
     })
 }
 
@@ -145,4 +230,8 @@ const runComputed = (fnc) => {
  */
 export function makeObserver(fnc) {
     runComputed(fnc)
+}
+
+export function handleQueue() {
+    handleComputedQueue()
 }

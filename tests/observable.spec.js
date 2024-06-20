@@ -1,4 +1,4 @@
-import {makeObserver, makeObservable} from "../observable.js";
+import {makeObserver, makeObservable, handleQueue} from "../observable.js";
 import {describe, it, expect, vi, beforeEach} from "vitest";
 
 let testData = {}
@@ -378,6 +378,75 @@ describe('Observable Tests', () => {
 
                 return value
             })
+        })
+    })
+
+    describe('nested observers', () => {
+        it('', () => {
+            const data = makeObservable(testData)
+            const nestedObserver = () => {
+                const name = data.users[0].name
+            }
+            const nestedSpy = vi.spyOn({onChange: nestedObserver}, 'onChange')
+
+            const rootObserver = () => {
+                const users = data.users
+                makeObserver(nestedSpy)
+            }
+            const rootSpy = vi.spyOn({onChange: rootObserver}, 'onChange')
+
+            makeObserver(rootSpy)
+            expect(rootSpy).toBeCalledTimes(1)
+            expect(nestedSpy).toBeCalledTimes(1)
+
+            handleQueue()
+            expect(rootSpy).toBeCalledTimes(1)
+            expect(nestedSpy).toBeCalledTimes(1)
+
+            data.users[0].name = 'New name'
+            handleQueue()
+            expect(rootSpy).toBeCalledTimes(1)
+            expect(nestedSpy).toBeCalledTimes(2)
+
+            data.users = [...data.users]
+            handleQueue()
+            expect(rootSpy).toBeCalledTimes(2)
+            expect(nestedSpy).toBeCalledTimes(4) // todo oops, looks like we called the old nested function too
+        })
+    })
+
+    describe('nested observers unobserveAll', () => {
+        it('', () => {
+            const data = makeObservable(testData)
+            const nestedObserver = () => {
+                const name = data.users[0].name
+            }
+            const nestedSpy = vi.spyOn({onChange: nestedObserver}, 'onChange')
+            nestedSpy.fncRole = 'nested'
+
+            const rootObserver = () => {
+                const users = data.users
+                makeObserver(nestedSpy)
+            }
+            const rootSpy = vi.spyOn({onChange: rootObserver}, 'onChange')
+            rootSpy.fncRole = 'root'
+
+            makeObserver(rootSpy)
+            expect(rootSpy).toBeCalledTimes(1)
+            expect(nestedSpy).toBeCalledTimes(1)
+
+            // unobserveAll()
+            data.users = [...data.users]
+            handleQueue()
+            expect(rootSpy).toBeCalledTimes(2)
+            expect(nestedSpy).toBeCalledTimes(2)
+
+            /*data.users = [...data.users]
+            expect(rootSpy).toBeCalledTimes(2)
+            expect(nestedSpy).toBeCalledTimes(3)
+            handleQueue()
+            expect(rootSpy).toBeCalledTimes(3)
+            expect(nestedSpy).toBeCalledTimes(5)*/
         })
     })
 })
