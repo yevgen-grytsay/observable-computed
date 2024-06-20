@@ -286,63 +286,98 @@ describe('Observable Tests', () => {
         ])
     })
 
-    it('use condition in observer, change value in condition', async () => {
-        const data = makeObservable(testData)
-        let value = []
-        const config = {
-            onChange() {
-                if (data.counter === 0) {
-                    value.push(data.users[0].name)
-                } else {
-                    value.push(data.users[1].name)
+    describe('Conditional branches', () => {
+        it('use condition in observer, change value in condition', async () => {
+            const data = makeObservable(testData)
+            let value = []
+            const config = {
+                onChange() {
+                    if (data.counter === 0) {
+                        value.push(data.users[0].name)
+                    } else {
+                        value.push(data.users[1].name)
+                    }
                 }
             }
-        }
-        const listener = vi.spyOn(config, 'onChange')
-        makeObserver(listener)
-        expect(listener).toBeCalledTimes(1)
+            const listener = vi.spyOn(config, 'onChange')
+            makeObserver(listener)
+            expect(listener).toBeCalledTimes(1)
+            expect(value).toStrictEqual(['Alice'])
 
-        data.counter = 1
-        expect(listener).toBeCalledTimes(1)
+            data.counter = 1
+            expect(listener).toBeCalledTimes(1)
+            expect(value).toStrictEqual(['Alice'])
 
-        const result = await vi.waitFor(() => {
-            expect(listener).toBeCalledTimes(2)
+            const result = await vi.waitFor(() => {
+                expect(listener).toBeCalledTimes(2)
 
-            return value
+                return value
+            })
+            expect(value).toStrictEqual([
+                'Alice',
+                'Bob',
+            ])
         })
-        expect(value).toStrictEqual([
-            'Alice',
-            'Bob',
-        ])
-    })
 
-    it('use condition in observer, change other value', async () => {
-        const data = makeObservable(testData)
-        let value = []
-        const config = {
-            onChange() {
-                if (data.counter === 0) {
-                    value.push(data.users[0].name)
-                } else {
-                    value.push(data.users[1].name)
+        it('use condition in observer, change other value', async () => {
+            const data = makeObservable(testData)
+            let value = []
+            const config = {
+                onChange() {
+                    if (data.counter === 0) {
+                        value.push(data.users[0].name)
+                    } else {
+                        value.push(data.users[1].name)
+                    }
                 }
             }
-        }
-        const listener = vi.spyOn(config, 'onChange')
-        makeObserver(listener)
-        expect(listener).toBeCalledTimes(1)
+            const listener = vi.spyOn(config, 'onChange')
+            makeObserver(listener)
+            expect(listener).toBeCalledTimes(1)
+            expect(value).toStrictEqual(['Alice'])
 
-        data.users[0].name = 'New Name'
-        expect(listener).toBeCalledTimes(1)
+            data.users[0].name = 'New Name'
+            expect(listener).toBeCalledTimes(1)
+            expect(value).toStrictEqual(['Alice'])
 
-        const result = await vi.waitFor(() => {
-            expect(listener).toBeCalledTimes(2)
+            const result = await vi.waitFor(() => {
+                expect(listener).toBeCalledTimes(2)
 
-            return value
+                return value
+            })
+            expect(value).toStrictEqual([
+                'Alice',
+                'New Name',
+            ])
         })
-        expect(value).toStrictEqual([
-            'Alice',
-            'New Name',
-        ])
+
+        it.fails('use condition in observer, condition value is not observed', async () => {
+            const data = makeObservable(testData)
+            let value = []
+            let flag = true
+            const config = {
+                onChange() {
+                    if (flag) {
+                        value.push(data.users[0].name)
+                    } else {
+                        value.push(data.users[1].name)
+                    }
+                }
+            }
+            const listener = vi.spyOn(config, 'onChange')
+            makeObserver(listener)
+            expect(listener).toBeCalledTimes(1)
+            expect(value).toStrictEqual(['Alice'])
+
+            flag = false
+            expect(listener).toBeCalledTimes(1)
+            expect(value).toStrictEqual(['Alice'])
+
+            const result = await vi.waitFor(() => {
+                expect(listener).toBeCalledTimes(2)
+
+                return value
+            })
+        })
     })
 })
