@@ -272,7 +272,7 @@ const runComputed = (fnc) => {
         fnc
     }
 
-    pushToObserverStack(config)
+    // pushToObserverStack(config)
 
     startNewPropAccessStack()
     fnc()
@@ -299,6 +299,8 @@ const runComputed = (fnc) => {
             debug.add(fnc, target, key)
         })
     }
+
+    return config
 }
 
 /**
@@ -306,7 +308,9 @@ const runComputed = (fnc) => {
  */
 export function makeObserver(fnc) {
     startNewObserverStack()
-    runComputed(fnc)
+
+    const config = runComputed(fnc)
+    pushToObserverStack(config)
 
 
     const childObservers = observerStackStack.length >= (stackLevel + 2) ? observerStackStack[stackLevel + 1] : []

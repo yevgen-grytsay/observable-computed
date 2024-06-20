@@ -499,12 +499,18 @@ describe('Observable Tests', () => {
             expect(spies[1]).toBeCalledTimes(1)
             expect(spies[0]).toBeCalledTimes(1)
 
-            /*data.users = [...data.users]
+            data.users = [...data.users]
+            expect(spies).length(2)
             expect(rootSpy).toBeCalledTimes(2)
-            expect(nestedSpy).toBeCalledTimes(3)
+            expect(spies[0]).toBeCalledTimes(1)
+            expect(spies[1]).toBeCalledTimes(1)
             handleQueue()
+            expect(spies).length(3)
             expect(rootSpy).toBeCalledTimes(3)
-            expect(nestedSpy).toBeCalledTimes(5)*/
+            expect(spies[0]).toBeCalledTimes(1)
+            expect(spies[1]).toBeCalledTimes(1)
+            expect(spies[2]).toBeCalledTimes(1)
+            /*expect(nestedSpy).toBeCalledTimes(5)*/
         })
 
         /*let childNo = 0
