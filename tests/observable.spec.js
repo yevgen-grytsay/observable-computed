@@ -1,4 +1,4 @@
-import {makeObserver, makeObservable, handleQueue} from "../observable.js";
+import {debug, makeObserver, makeObservable, handleQueue} from "../observable.js";
 import {describe, it, expect, vi, beforeEach} from "vitest";
 
 let testData = {}
@@ -422,14 +422,14 @@ describe('Observable Tests', () => {
                 const name = data.users[0].name
             }
             const nestedSpy = vi.spyOn({onChange: nestedObserver}, 'onChange')
-            nestedSpy.fncRole = 'nested'
+            nestedSpy.role = 'nested'
 
             const rootObserver = () => {
                 const users = data.users
                 makeObserver(nestedSpy)
             }
             const rootSpy = vi.spyOn({onChange: rootObserver}, 'onChange')
-            rootSpy.fncRole = 'root'
+            rootSpy.role = 'root'
 
             makeObserver(rootSpy)
             expect(rootSpy).toBeCalledTimes(1)
@@ -439,7 +439,7 @@ describe('Observable Tests', () => {
             data.users = [...data.users]
             handleQueue()
             expect(rootSpy).toBeCalledTimes(2)
-            expect(nestedSpy).toBeCalledTimes(2)
+            expect(nestedSpy).toBeCalledTimes(3)
 
             /*data.users = [...data.users]
             expect(rootSpy).toBeCalledTimes(2)
@@ -448,5 +448,99 @@ describe('Observable Tests', () => {
             expect(rootSpy).toBeCalledTimes(3)
             expect(nestedSpy).toBeCalledTimes(5)*/
         })
+
+        let childNo = 0
+        function getChildNo() {
+            childNo++
+
+            return childNo
+        }
+
+        it('#2', () => {
+            debug.start()
+            const data = makeObservable(testData)
+            const nestedObserver = () => {
+                const name = data.users[0].name
+            }
+            let spies = []
+
+            const rootObserver = () => {
+                const users = data.users
+                const nestedSpy = vi.spyOn({onChange: nestedObserver}, 'onChange')
+                nestedSpy.role = `child-${getChildNo()}`
+                spies.push(nestedSpy)
+                makeObserver(nestedSpy)
+            }
+            const rootSpy = vi.spyOn({onChange: rootObserver}, 'onChange')
+            rootSpy.role = 'root'
+
+            makeObserver(rootSpy)
+            expect(rootSpy).toBeCalledTimes(1)
+            expect(spies).length(1)
+            expect(spies[0]).toBeCalledTimes(1)
+
+            data.users = [...data.users]
+            expect(spies).length(1)
+
+            handleQueue()
+            console.debug(`${debug}`)
+            expect(spies).length(2)
+            expect(rootSpy).toBeCalledTimes(2)
+            expect(spies[0]).toBeCalledTimes(1)
+            expect(spies[1]).toBeCalledTimes(1)
+
+            /*data.users = [...data.users]
+            expect(rootSpy).toBeCalledTimes(2)
+            expect(nestedSpy).toBeCalledTimes(3)
+            handleQueue()
+            expect(rootSpy).toBeCalledTimes(3)
+            expect(nestedSpy).toBeCalledTimes(5)*/
+        })
+
+        /*let childNo = 0
+        function getChildNo() {
+            childNo++
+
+            return childNo
+        }
+        let rootNo = 0
+        function getRootNo() {
+            rootNo++
+
+            return rootNo
+        }
+
+        it('nested', () => {
+            const data = makeObservable({
+                settings: {
+                    users: [
+                        {id: 1, name: 'Alice'},
+                        // {id: 2, name: 'Bob'},
+                    ]
+                }
+            })
+
+            const rootFnc = () => {
+                console.log('#1')
+                // const names = counter.settings.users.map(u => u.name)
+                // console.log(names)
+                data.settings.users.forEach((u) => {
+                    const fnc = () => {
+                        const name = u.name
+                        console.log('#2', name)
+                    }
+                    fnc.role = `child #${getChildNo()}`
+                    makeObserver(fnc)
+                })
+            }
+            rootFnc.role = `root #${getRootNo()}`
+            makeObserver(rootFnc)
+
+            data.settings.users = [...data.settings.users]
+            handleQueue()
+
+            data.settings.users[0].name = `Name ${Date.now()}`
+            handleQueue()
+        })*/
     })
 })

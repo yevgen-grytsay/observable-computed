@@ -5,6 +5,55 @@ let propAccessStackStack = []
 /*const debug = {
     computedMap: new Map()
 }*/
+export const debug = {
+    byTarget: new Map(),
+    start() {
+        this.byTarget = new Map()
+    },
+    add(fnc, target, key) {
+        let byKey = this.byTarget.get(target)
+        if (!byKey) {
+            byKey = new Map()
+        }
+
+        let handlers = byKey.get(key)
+        if (!handlers) {
+            handlers = new Set()
+        }
+
+        handlers.add(fnc)
+        byKey.set(key, handlers)
+        this.byTarget.set(target, byKey)
+    },
+    /*add(fnc, target, key) {
+        let targets = this.computedMap.get(fnc)
+        if (!targets) {
+            targets = new Map()
+        }
+        let props = targets.get(target)
+        if (!props) {
+            props = new Set()
+        }
+        props.add(key)
+
+        targets.set(target, props)
+        this.computedMap.set(fnc, targets)
+        // console.log({computedMap: debug.computedMap})
+    },*/
+    toString() {
+        const result = []
+        this.byTarget.forEach((byKey, target) => {
+            const parts = []
+            byKey.forEach((handlers, key) => {
+                const handlerIds = Array.from(handlers.values()).map(h => h._id || h.role)
+                parts.push(`${key}=${handlerIds.join(',')}`)
+            })
+            result.push(`${JSON.stringify(target)}: ${parts.join('; ')}`)
+        })
+
+        return result.join("\n")
+    }
+}
 
 const startNewPropAccessStack = () => {
     propAccessStackStack.push([])
@@ -26,6 +75,7 @@ const pushToPropAccessStack = ({target, key}) => {
 
 let computedByTarget = new WeakMap()
 
+let unregisteredSet = new Set()
 let handlerQueue = new Set()
 const enqueueComputed = (target, p) => {
     // if target is proxy
@@ -50,8 +100,15 @@ const handleComputedQueue = () => {
     handlerQueue = new Set()
 
     queue.forEach(fnc => {
-        runComputed(fnc)
+        if (unregisteredSet.has(fnc)) {
+            console.log(`skip unregistered fnc: ${fnc.role}`)
+            return
+        }
+        makeObserver(fnc)
+        // runComputed(fnc) // todo maybe run makeObserver instead
     })
+
+    unregisteredSet = new Set()
 }
 
 /**
@@ -86,7 +143,7 @@ const registerAccess = (target, p) => {
     // console.log({debug})
 }
 
-let observerStackStack = []
+let observerStackStack = [[]]
 function startNewObserverStack() {
     observerStackStack.push([])
 }
@@ -96,9 +153,9 @@ function endObserverStack() {
 }
 
 function pushToObserverStack(fnc) {
-    if (observerStackStack.length === 0) {
-        return
-    }
+    // if (observerStackStack.length === 0) {
+    //     return
+    // }
     observerStackStack[observerStackStack.length - 1].push(fnc)
 }
 
@@ -117,8 +174,8 @@ const makeAndRegisterObservable = (value) => {
     if (!proxy) {
         proxy = makeObservable(value)
         rawToProxy.set(value, proxy)
+        proxyToRaw.set(proxy, value)
     }
-    proxyToRaw.set(proxy, value)
 
     return proxy
 }
@@ -176,10 +233,11 @@ const runComputed = (fnc) => {
     fnc.nestedObservers = fnc.nestedObservers || []
     fnc.nestedObservers.forEach(nestedFnc => {
         nestedFnc.cleaners.forEach(clean => {
-            const msg = `running ${fnc.role} child's cleaners`
-            console.log(msg)
+            // const msg = `running ${fnc.role} child's cleaners`
+            // console.log(msg)
             clean()
         })
+        unregisteredSet.add(nestedFnc)
     })
     fnc.nestedObservers = []
 
@@ -205,10 +263,12 @@ const runComputed = (fnc) => {
 
         fnc.cleaners = fnc.cleaners || []
         fnc.cleaners.push(() => {
-            console.log(`delete listener for ${fnc.role}`)
+            console.log(`delete listener for ${fnc.role}, key=${key}`)
             computedSet.delete(fnc)
+            // unregisteredSet.add(fnc)
         })
 
+        debug.add(fnc, target, key)
         /*let targets = debug.computedMap.get(fnc)
         if (!targets) {
             targets = new Map()
@@ -229,6 +289,7 @@ const runComputed = (fnc) => {
  * @param {function} fnc
  */
 export function makeObserver(fnc) {
+    observerStackStack = [[]]
     runComputed(fnc)
 }
 
