@@ -5,6 +5,9 @@ let testData = {}
 
 describe('Observable Tests', () => {
     beforeEach(() => {
+        debug.clean()
+    })
+    beforeEach(() => {
         testData = {
             counter: 0,
             nodes: {

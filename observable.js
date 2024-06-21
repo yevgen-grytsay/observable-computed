@@ -4,11 +4,21 @@ const proxyToRaw = new WeakMap()
 let propAccessStackStack = []
 
 export const debug = {
+    enabled: false,
     byTarget: new Map(),
     start() {
+        this.enabled = true
+        this.byTarget = new Map()
+    },
+    clean() {
+        this.enabled = false
         this.byTarget = new Map()
     },
     add(fnc, target, key) {
+        if (!this.enabled) {
+            return
+        }
+
         let byKey = this.byTarget.get(target)
         if (!byKey) {
             byKey = new Map()
@@ -234,6 +244,9 @@ export function makeObserver(fnc) {
     fnc.nestedObservers = childObservers.map(o => o.fnc)
 
     stackLevel--
+    if (stackLevel === -1) {
+        observerStackStack = []
+    }
 }
 
 export function handleQueue() {
