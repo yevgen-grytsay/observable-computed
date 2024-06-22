@@ -569,20 +569,26 @@ describe('Observable Tests', () => {
             expect(rootSpy).toBeCalledTimes(1)
             expect(nestedSpy).toBeCalledTimes(1)
 
+            /**
+             * When a nested observer is called, its root observer should not be called
+             */
             data.users[0].name = 'New name'
             handleQueue()
             expect(rootSpy).toBeCalledTimes(1)
             expect(nestedSpy).toBeCalledTimes(2)
 
+            /**
+             * When root observer is called, all nested observers should be (recreated and) called too
+             */
             data.users = [...data.users]
             handleQueue()
             expect(rootSpy).toBeCalledTimes(2)
-            expect(nestedSpy).toBeCalledTimes(3) // todo oops, looks like we called the old nested function too
+            expect(nestedSpy).toBeCalledTimes(3)
         })
     })
 
     describe('nested observers', () => {
-        it('nested observers #1', () => {
+        it('use same function instance as nested observer', () => {
             const data = makeObservable(testData)
             const nestedObserver = () => {
                 const name = data.users[0].name
@@ -601,18 +607,10 @@ describe('Observable Tests', () => {
             expect(rootSpy).toBeCalledTimes(1)
             expect(nestedSpy).toBeCalledTimes(1)
 
-            // unobserveAll()
             data.users = [...data.users]
             handleQueue()
             expect(rootSpy).toBeCalledTimes(2)
             expect(nestedSpy).toBeCalledTimes(2)
-
-            /*data.users = [...data.users]
-            expect(rootSpy).toBeCalledTimes(2)
-            expect(nestedSpy).toBeCalledTimes(3)
-            handleQueue()
-            expect(rootSpy).toBeCalledTimes(3)
-            expect(nestedSpy).toBeCalledTimes(5)*/
         })
 
         let childNo = 0
@@ -622,7 +620,7 @@ describe('Observable Tests', () => {
             return childNo
         }
 
-        it('nested observers #2', () => {
+        it('each time create new instance of nested function', () => {
             debug.start()
             const data = makeObservable(testData)
             const nestedObserver = () => {
@@ -666,53 +664,6 @@ describe('Observable Tests', () => {
             expect(spies[0]).toBeCalledTimes(1)
             expect(spies[1]).toBeCalledTimes(1)
             expect(spies[2]).toBeCalledTimes(1)
-            /*expect(nestedSpy).toBeCalledTimes(5)*/
         })
-
-        /*let childNo = 0
-        function getChildNo() {
-            childNo++
-
-            return childNo
-        }
-        let rootNo = 0
-        function getRootNo() {
-            rootNo++
-
-            return rootNo
-        }
-
-        it('nested', () => {
-            const data = makeObservable({
-                settings: {
-                    users: [
-                        {id: 1, name: 'Alice'},
-                        // {id: 2, name: 'Bob'},
-                    ]
-                }
-            })
-
-            const rootFnc = () => {
-                console.log('#1')
-                // const names = counter.settings.users.map(u => u.name)
-                // console.log(names)
-                data.settings.users.forEach((u) => {
-                    const fnc = () => {
-                        const name = u.name
-                        console.log('#2', name)
-                    }
-                    fnc.role = `child #${getChildNo()}`
-                    makeObserver(fnc)
-                })
-            }
-            rootFnc.role = `root #${getRootNo()}`
-            makeObserver(rootFnc)
-
-            data.settings.users = [...data.settings.users]
-            handleQueue()
-
-            data.settings.users[0].name = `Name ${Date.now()}`
-            handleQueue()
-        })*/
     })
 })
