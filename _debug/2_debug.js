@@ -1,5 +1,5 @@
 // import {vi} from "vitest";
-import {debug, handleQueue, makeObservable, makeObserver} from "./observable.js";
+import {debug, handleQueue, makeObservable, makeObserver} from "../observable.js";
 
 let childNo = 0
 function getChildNo() {

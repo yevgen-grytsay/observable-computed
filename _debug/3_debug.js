@@ -1,5 +1,5 @@
 // import {vi} from "vitest";
-import {handleQueue, makeObservable, makeObserver} from "./observable.js";
+import {handleQueue, makeObservable, makeObserver} from "../observable.js";
 
 const testData = {
     settings: {
