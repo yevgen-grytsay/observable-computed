@@ -299,6 +299,159 @@ describe('Observable Tests', () => {
         ])
     })
 
+    describe('working with arrays', () => {
+        it('should react to "push" method', () => {
+            const users = makeObservable([
+                {id: 1, name: 'User #1'},
+                {id: 2, name: 'User #2'},
+            ])
+            const result = []
+            const observer = () => {
+                result.push([
+                    ...users
+                ])
+            }
+            const observerSpy = vi.spyOn({observer}, 'observer')
+
+            /**
+             * Step #1
+             */
+            makeObserver(observerSpy)
+            expect(observerSpy).toBeCalledTimes(1)
+            expect(result).toStrictEqual([
+                [
+                    {id: 1, name: 'User #1'},
+                    {id: 2, name: 'User #2'},
+                ]
+            ])
+
+            handleQueue()
+            expect(observerSpy).toBeCalledTimes(1)
+
+            /**
+             * Step #2
+             */
+            users.push({id: 3, name: 'User #3'})
+            expect(observerSpy).toBeCalledTimes(1)
+
+            handleQueue()
+            expect(observerSpy).toBeCalledTimes(2)
+            expect(result).toStrictEqual([
+                [
+                    {id: 1, name: 'User #1'},
+                    {id: 2, name: 'User #2'},
+                ],
+                [
+                    {id: 1, name: 'User #1'},
+                    {id: 2, name: 'User #2'},
+                    {id: 3, name: 'User #3'},
+                ]
+            ])
+        })
+
+        it('should react to "splice" method', () => {
+            const users = makeObservable([
+                {id: 1, name: 'User #1'},
+                {id: 2, name: 'User #2'},
+                {id: 3, name: 'User #3'},
+            ])
+            const result = []
+            const observer = () => {
+                result.push([
+                    ...users
+                ])
+            }
+            const observerSpy = vi.spyOn({observer}, 'observer')
+
+            /**
+             * Step #1
+             */
+            makeObserver(observerSpy)
+            expect(observerSpy).toBeCalledTimes(1)
+            expect(result).toStrictEqual([
+                [
+                    {id: 1, name: 'User #1'},
+                    {id: 2, name: 'User #2'},
+                    {id: 3, name: 'User #3'},
+                ]
+            ])
+
+            handleQueue()
+            expect(observerSpy).toBeCalledTimes(1)
+
+            /**
+             * Step #2
+             */
+            users.splice(1, 2)
+            expect(observerSpy).toBeCalledTimes(1)
+
+            handleQueue()
+            expect(observerSpy).toBeCalledTimes(2)
+            expect(result).toStrictEqual([
+                [
+                    {id: 1, name: 'User #1'},
+                    {id: 2, name: 'User #2'},
+                    {id: 3, name: 'User #3'},
+                ],
+                [
+                    {id: 1, name: 'User #1'},
+                ]
+            ])
+        })
+
+        it('should react to updating property of an array item', () => {
+            const users = makeObservable([
+                {id: 1, name: 'User #1'},
+                {id: 2, name: 'User #2'},
+                {id: 3, name: 'User #3'},
+            ])
+            const result = []
+            const observer = () => {
+                result.push([
+                    ...users.map(u => u.name)
+                ])
+            }
+            const observerSpy = vi.spyOn({observer}, 'observer')
+
+            /**
+             * Step #1
+             */
+            makeObserver(observerSpy)
+            expect(observerSpy).toBeCalledTimes(1)
+            expect(result).toStrictEqual([
+                [
+                    'User #1',
+                    'User #2',
+                    'User #3',
+                ]
+            ])
+
+            handleQueue()
+            expect(observerSpy).toBeCalledTimes(1)
+
+            /**
+             * Step #2
+             */
+            users[1].name += ' upd'
+            expect(observerSpy).toBeCalledTimes(1)
+
+            handleQueue()
+            expect(observerSpy).toBeCalledTimes(2)
+            expect(result).toStrictEqual([
+                [
+                    'User #1',
+                    'User #2',
+                    'User #3',
+                ],
+                [
+                    'User #1',
+                    'User #2 upd',
+                    'User #3',
+                ]
+            ])
+        })
+    })
+
     describe('Conditional branches', () => {
         it('use condition in observer, change value in condition', async () => {
             const data = makeObservable(testData)
@@ -428,8 +581,8 @@ describe('Observable Tests', () => {
         })
     })
 
-    describe('nested observers unobserveAll', () => {
-        it('', () => {
+    describe('nested observers', () => {
+        it('nested observers #1', () => {
             const data = makeObservable(testData)
             const nestedObserver = () => {
                 const name = data.users[0].name
@@ -469,7 +622,7 @@ describe('Observable Tests', () => {
             return childNo
         }
 
-        it('#2', () => {
+        it('nested observers #2', () => {
             debug.start()
             const data = makeObservable(testData)
             const nestedObserver = () => {
