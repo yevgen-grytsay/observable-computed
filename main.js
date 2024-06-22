@@ -210,3 +210,52 @@ main.js:179 MAIN #2 delayed
 main.js:161 B delayed
 main.js:183 MAIN #3 delayed
  */
+
+
+const data = makeObservable({
+    settings: {
+        users: [
+            {id: 1, name: 'Alice'},
+            // {id: 2, name: 'Bob'},
+        ]
+    }
+})
+
+let childNo = 0
+function getChildNo() {
+    childNo++
+
+    return childNo
+}
+let rootNo = 0
+function getRootNo() {
+    rootNo++
+
+    return rootNo
+}
+
+const rootFnc = () => {
+    console.log('#1')
+    // const names = counter.settings.users.map(u => u.name)
+    // console.log(names)
+    data.settings.users.forEach((u) => {
+        const fnc = () => {
+            const name = u.name
+            console.log('#2', name)
+        }
+        fnc.role = `child #${getChildNo()}`
+        makeObserver(fnc)
+    })
+}
+rootFnc.role = `root #${getRootNo()}`
+makeObserver(rootFnc)
+
+window.app = {
+    triggerRoot() {
+        data.settings.users = [...data.settings.users]
+    },
+    triggerNested() {
+        data.settings.users[0].name = `Name ${Date.now()}`
+    },
+    ...window.app,
+}

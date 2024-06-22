@@ -1,22 +1,84 @@
 
 const rawToProxy = new WeakMap()
-let getPropStack = []
+const proxyToRaw = new WeakMap()
+let propAccessStackStack = []
 
-const startStack = () => {
-    getPropStack = []
+export const debug = {
+    enabled: false,
+    byTarget: new Map(),
+    start() {
+        this.enabled = true
+        this.byTarget = new Map()
+    },
+    clean() {
+        this.enabled = false
+        this.byTarget = new Map()
+    },
+    add(fnc, target, key) {
+        if (!this.enabled) {
+            return
+        }
+
+        let byKey = this.byTarget.get(target)
+        if (!byKey) {
+            byKey = new Map()
+        }
+
+        let handlers = byKey.get(key)
+        if (!handlers) {
+            handlers = new Set()
+        }
+
+        handlers.add(fnc)
+        byKey.set(key, handlers)
+        this.byTarget.set(target, byKey)
+    },
+    toString() {
+        const result = []
+        this.byTarget.forEach((byKey, target) => {
+            const parts = []
+            byKey.forEach((handlers, key) => {
+                if (typeof key === 'symbol') {
+                    key = '<symbol>'
+                }
+                const handlerIds = Array.from(handlers.values()).map(h => h.role)
+                parts.push(`${key}=${handlerIds.join(',')}`)
+            })
+            result.push(`${JSON.stringify(target)}: ${parts.join('; ')}`)
+        })
+
+        return result.join("\n")
+    }
 }
 
-const endStack = () => {
-    const result = Array.from(getPropStack)
-    getPropStack = []
-
-    return result
+const startNewPropAccessStack = () => {
+    propAccessStackStack.push([])
 }
 
-const computedByTarget = new WeakMap()
+const endPropAccessStack = () => {
+    return Array.from(propAccessStackStack.pop())
+}
 
+const pushToPropAccessStack = ({target, key}) => {
+    if (proxyToRaw.has(target)) {
+        target = proxyToRaw.get(target)
+    }
+    if (propAccessStackStack.length === 0) {
+        return
+    }
+    propAccessStackStack[propAccessStackStack.length - 1].push({target, key})
+}
+
+let computedByTarget = new WeakMap()
+
+let unregisteredSet = new WeakSet()
 let handlerQueue = new Set()
 const enqueueComputed = (target, p) => {
+    // if target is proxy
+    if (proxyToRaw.has(target)) {
+        target = proxyToRaw.get(target)
+    }
+
     const computedByKey = computedByTarget.get(target)
     if (!computedByKey) {
         return
@@ -34,7 +96,11 @@ const handleComputedQueue = () => {
     handlerQueue = new Set()
 
     queue.forEach(fnc => {
-        runComputed(fnc)
+        if (unregisteredSet.has(fnc)) {
+            console.log(`skip unregistered fnc: ${fnc.role}`)
+            return
+        }
+        makeObserver(fnc)
     })
 }
 
@@ -43,6 +109,11 @@ const handleComputedQueue = () => {
  * @param {string|symbol} p
  */
 const registerAccess = (target, p) => {
+    // if target is proxy
+    if (proxyToRaw.has(target)) {
+        target = proxyToRaw.get(target)
+    }
+
     let computedByKey = computedByTarget.get(target)
     if (!computedByKey) {
         computedByKey = new Map()
@@ -53,8 +124,28 @@ const registerAccess = (target, p) => {
         computed = new Set()
     }
 
+    const configs = observerStackStack[stackLevel] ?? []
+    const {fnc} = configs.length > 0 ? configs[configs.length - 1] : {fnc: null}
+    fnc && computed.add(fnc)
+
+    fnc && debug.add(fnc, target, p)
+
     computedByKey.set(p, computed)
     computedByTarget.set(target, computedByKey)
+}
+
+let observerStackStack = []
+let stackLevel = -1
+function startNewObserverStack() {
+    if (observerStackStack.length < (stackLevel + 2)) {
+        observerStackStack.push([])
+    }
+
+    stackLevel++
+}
+
+function pushToObserverStack(fnc) {
+    observerStackStack[stackLevel].push(fnc)
 }
 
 /**
@@ -72,6 +163,7 @@ const makeAndRegisterObservable = (value) => {
     if (!proxy) {
         proxy = makeObservable(value)
         rawToProxy.set(value, proxy)
+        proxyToRaw.set(proxy, value)
     }
 
     return proxy
@@ -79,15 +171,18 @@ const makeAndRegisterObservable = (value) => {
 
 const proxyHandler = {
     get(target, p, receiver) {
-        const value = Reflect.get(target, p, receiver)
+        let value = Reflect.get(target, p, receiver)
 
+        value = makeAndRegisterObservable(value)
+
+        // registerAccess and pushToPropAccessStack must be called after makeAndRegisterObservable
         registerAccess(target, p)
-        getPropStack.push({
+        pushToPropAccessStack({
             target,
             key: p,
         })
 
-        return makeAndRegisterObservable(value)
+        return value
     },
     set(target, p, newValue, receiver) {
         const result = Reflect.set(target, p, newValue, receiver)
@@ -101,7 +196,7 @@ const proxyHandler = {
         const result = Reflect.has(target, p)
 
         registerAccess(target, p)
-        getPropStack.push({
+        pushToPropAccessStack({
             target,
             key: p,
         })
@@ -124,25 +219,36 @@ export function makeObservable(obj) {
  * @param {function} fnc
  */
 const runComputed = (fnc) => {
-    startStack()
+    startNewPropAccessStack()
     fnc()
-    const dependencies = endStack()
-
-    dependencies.forEach(({target, key}) => {
-        const computedByKey = computedByTarget.get(target) || new Map()
-        const computedSet = computedByKey.get(key) || new Set()
-
-        computedSet.add(fnc)
-
-        computedByKey.set(key, computedSet)
-
-        computedByTarget.set(target, computedByKey)
-    })
+    endPropAccessStack()
 }
 
 /**
  * @param {function} fnc
  */
 export function makeObserver(fnc) {
+    fnc.nestedObservers = fnc.nestedObservers || []
+    fnc.nestedObservers.forEach(nestedFnc => {
+        unregisteredSet.add(nestedFnc)
+    })
+    fnc.nestedObservers = []
+
+    startNewObserverStack()
+
+    // Щоб в registerAccess знати контекст, pushToObserverStack треба виконати до runComputed
+    pushToObserverStack({fnc})
     runComputed(fnc)
+
+    const childObservers = observerStackStack.length >= (stackLevel + 2) ? observerStackStack[stackLevel + 1] : []
+    fnc.nestedObservers = childObservers.map(o => o.fnc)
+
+    stackLevel--
+    if (stackLevel === -1) {
+        observerStackStack = []
+    }
+}
+
+export function handleQueue() {
+    handleComputedQueue()
 }
