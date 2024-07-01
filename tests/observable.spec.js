@@ -1,4 +1,4 @@
-import {debug, makeObserver, makeObservable, handleQueue} from "../observable.js";
+import {debug, makeObserver, makeObservable, handleQueue} from "../src/observable.js";
 import {describe, it, expect, vi, beforeEach} from "vitest";
 
 let testData = {}

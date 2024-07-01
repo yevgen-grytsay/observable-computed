@@ -1,5 +1,5 @@
 import './style.css'
-import {makeObservable, makeObserver} from "./observable.js";
+import {makeObservable, makeObserver} from "./src/observable.js";
 import {createPathProxy} from "./path-detection-proxy.js";
 
 

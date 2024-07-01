@@ -252,3 +252,34 @@ export function makeObserver(fnc) {
 export function handleQueue() {
     handleComputedQueue()
 }
+
+//
+// in-source test suites
+//
+if (import.meta.vitest) {
+    const { it, expect } = import.meta.vitest
+
+    it('test stack of simple observer', () => {
+        const stack = []
+        observerStackStack = new Proxy([], {
+            set(target, p, newValue, receiver) {
+                const result = Reflect.set(target, p, newValue, receiver)
+
+                if (typeof p !== 'symbol' && /[0-9]+/.test(p)) {
+                    stack.push(newValue)
+                }
+
+                return result
+            }
+        })
+
+        const data = makeObservable({a: 'test'})
+
+        makeObserver(() => {
+            const {a} = data;
+        })
+        data.a += ' upd'
+
+        expect(stack).to.have.lengthOf(1);
+    })
+}
