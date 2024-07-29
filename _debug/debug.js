@@ -1,4 +1,4 @@
-import {debug, handleQueue, makeObservable, makeObserver} from "../observable.js";
+import {debug, handleQueue, makeObservable, makeObserver} from "../src/observable.js";
 
 let childNo = 0
 function getChildNo() {

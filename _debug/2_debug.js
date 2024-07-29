@@ -1,5 +1,5 @@
 // import {vi} from "vitest";
-import {debug, handleQueue, makeObservable, makeObserver} from "../observable.js";
+import {debug, handleQueue, makeObservable, makeObserver} from "../src/observable.js";
 
 let childNo = 0
 function getChildNo() {
@@ -25,7 +25,7 @@ const nestedObserver2 = () => {
 }
 nestedObserver2.role = `child2-${getChildNo()}`
 
-function createNestedObserver() {
+/*function createNestedObserver() {
     const nestedObserver = () => {
         const name = data.users[0].name
         console.log('#2', name)
@@ -33,7 +33,7 @@ function createNestedObserver() {
     nestedObserver.role = 'child'
 
     return nestedObserver
-}
+}*/
 
 const rootObserver = () => {
     console.log('#1')

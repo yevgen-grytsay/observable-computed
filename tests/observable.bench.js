@@ -1,5 +1,5 @@
 import {bench, describe} from "vitest";
-import {makeObservable, makeObserver} from "../observable.js";
+import {makeObservable, makeObserver} from "../src/observable.js";
 
 
 const createObject = function() {
