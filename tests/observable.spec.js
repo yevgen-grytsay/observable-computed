@@ -450,6 +450,39 @@ describe('Observable Tests', () => {
                 ]
             ])
         })
+
+        it('detached object', () => {
+            const data = makeObservable({
+                config: {
+                    user: {
+                        name: 'Alice'
+                    }
+                }
+            })
+            const nameList = []
+            const config = {
+                onChange() {
+                    nameList.push(data.config.user.name)
+                }
+            }
+            const listener = vi.spyOn(config, 'onChange')
+
+            makeObserver(listener)
+
+            expect(listener).toBeCalledTimes(1)
+            expect(nameList).toEqual(['Alice'])
+
+            const detachedUser = data.config.user
+            data.config.user = {name: 'Bob'}
+            handleQueue()
+            expect(listener).toBeCalledTimes(2)
+            expect(nameList).toEqual(['Alice', 'Bob'])
+
+            detachedUser.name = 'Eve'
+            handleQueue()
+            expect(nameList).toEqual(['Alice', 'Bob'])
+            expect(listener).toBeCalledTimes(2)
+        })
     })
 
     describe('Conditional branches', () => {
