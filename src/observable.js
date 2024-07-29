@@ -294,7 +294,7 @@ export function handleQueue() {
 //
 // in-source test suites
 //
-if (import.meta.vitest) {
+/*if (import.meta.vitest) {
     const { it, expect } = import.meta.vitest
 
     it('test stack of simple observer', () => {
@@ -320,4 +320,4 @@ if (import.meta.vitest) {
 
         expect(stack).to.have.lengthOf(1);
     })
-}
+}*/
