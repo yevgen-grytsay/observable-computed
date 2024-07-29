@@ -3,6 +3,8 @@ const rawToProxy = new WeakMap()
 const proxyToRaw = new WeakMap()
 let propAccessStackStack = []
 
+const nestedObserversKey = Symbol('MyObservable_NestedObservers')
+
 export const debug = {
     enabled: false,
     byTarget: new Map(),
@@ -228,11 +230,11 @@ const runComputed = (fnc) => {
  * @param {function} fnc
  */
 export function makeObserver(fnc) {
-    fnc.nestedObservers = fnc.nestedObservers || []
-    fnc.nestedObservers.forEach(nestedFnc => {
+    fnc[nestedObserversKey] = fnc[nestedObserversKey] || []
+    fnc[nestedObserversKey].forEach(nestedFnc => {
         unregisteredSet.add(nestedFnc)
     })
-    fnc.nestedObservers = []
+    fnc[nestedObserversKey] = []
 
     startNewObserverStack()
 
@@ -241,7 +243,7 @@ export function makeObserver(fnc) {
     runComputed(fnc)
 
     const childObservers = observerStackStack.length >= (stackLevel + 2) ? observerStackStack[stackLevel + 1] : []
-    fnc.nestedObservers = childObservers.map(o => o.fnc)
+    fnc[nestedObserversKey] = childObservers.map(o => o.fnc)
 
     stackLevel--
     if (stackLevel === -1) {
