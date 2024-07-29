@@ -480,8 +480,8 @@ describe('Observable Tests', () => {
 
             detachedUser.name = 'Eve'
             handleQueue()
-            expect(nameList).toEqual(['Alice', 'Bob'])
             expect(listener).toBeCalledTimes(2)
+            expect(nameList).toEqual(['Alice', 'Bob'])
         })
     })
 

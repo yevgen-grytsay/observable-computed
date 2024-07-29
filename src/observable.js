@@ -150,6 +150,39 @@ function pushToObserverStack(fnc) {
     observerStackStack[stackLevel].push(fnc)
 }
 
+const detachObject = (oldValue) => {
+    if (typeof oldValue !== 'object' || oldValue === null) {
+        return null
+    }
+
+    const pickObjects = (value) => {
+        return Object.entries(value)
+            .map(([k, v]) => v)
+            .filter(v => typeof v === 'object' && v !== null)
+    }
+
+    /**
+     * @type {Object[]}
+     */
+    let queue = [
+        oldValue,
+        ...pickObjects(oldValue),
+    ]
+    while (queue.length > 0) {
+        const item = queue.shift()
+
+        const computedByKey = computedByTarget.get(item)
+        if (computedByKey) {
+            computedByTarget.delete(item)
+        }
+
+        queue = [
+            ...queue,
+            ...pickObjects(item),
+        ]
+    }
+}
+
 /**
  * @template T
  *
@@ -187,7 +220,10 @@ const proxyHandler = {
         return value
     },
     set(target, p, newValue, receiver) {
+        const oldValue = target[p] || null
         const result = Reflect.set(target, p, newValue, receiver)
+
+        detachObject(oldValue)
 
         enqueueComputed(target, p)
         Promise.resolve().then(handleComputedQueue)
