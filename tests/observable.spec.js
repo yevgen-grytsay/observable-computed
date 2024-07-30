@@ -450,8 +450,11 @@ describe('Observable Tests', () => {
                 ]
             ])
         })
+    })
 
-        it('detached object', () => {
+    describe('Detached object', () => {
+
+        it('variant #1', () => {
             const data = makeObservable({
                 config: {
                     user: {
@@ -484,7 +487,7 @@ describe('Observable Tests', () => {
             expect(nameList).toEqual(['Alice', 'Bob'])
         })
 
-        it('detached object #2', () => {
+        it('variant #2', () => {
             const data = makeObservable({
                 config: {
                     user: {
