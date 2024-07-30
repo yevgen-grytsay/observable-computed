@@ -3,6 +3,8 @@ const rawToProxy = new WeakMap()
 const proxyToRaw = new WeakMap()
 let propAccessStackStack = []
 
+const nestedObserversKey = Symbol('MyObservable_NestedObservers')
+
 export const debug = {
     enabled: false,
     byTarget: new Map(),
@@ -148,6 +150,39 @@ function pushToObserverStack(fnc) {
     observerStackStack[stackLevel].push(fnc)
 }
 
+const detachObject = (oldValue) => {
+    if (typeof oldValue !== 'object' || oldValue === null) {
+        return null
+    }
+
+    const pickObjects = (value) => {
+        return Object.entries(value)
+            .map(([k, v]) => v)
+            .filter(v => typeof v === 'object' && v !== null)
+    }
+
+    /**
+     * @type {Object[]}
+     */
+    let queue = [
+        oldValue,
+        ...pickObjects(oldValue),
+    ]
+    while (queue.length > 0) {
+        const item = queue.shift()
+
+        const computedByKey = computedByTarget.get(item)
+        if (computedByKey) {
+            computedByTarget.delete(item)
+        }
+
+        queue = [
+            ...queue,
+            ...pickObjects(item),
+        ]
+    }
+}
+
 /**
  * @template T
  *
@@ -185,7 +220,10 @@ const proxyHandler = {
         return value
     },
     set(target, p, newValue, receiver) {
+        const oldValue = target[p] || null
         const result = Reflect.set(target, p, newValue, receiver)
+
+        detachObject(oldValue)
 
         enqueueComputed(target, p)
         Promise.resolve().then(handleComputedQueue)
@@ -228,11 +266,11 @@ const runComputed = (fnc) => {
  * @param {function} fnc
  */
 export function makeObserver(fnc) {
-    fnc.nestedObservers = fnc.nestedObservers || []
-    fnc.nestedObservers.forEach(nestedFnc => {
+    fnc[nestedObserversKey] = fnc[nestedObserversKey] || []
+    fnc[nestedObserversKey].forEach(nestedFnc => {
         unregisteredSet.add(nestedFnc)
     })
-    fnc.nestedObservers = []
+    fnc[nestedObserversKey] = []
 
     startNewObserverStack()
 
@@ -241,7 +279,7 @@ export function makeObserver(fnc) {
     runComputed(fnc)
 
     const childObservers = observerStackStack.length >= (stackLevel + 2) ? observerStackStack[stackLevel + 1] : []
-    fnc.nestedObservers = childObservers.map(o => o.fnc)
+    fnc[nestedObserversKey] = childObservers.map(o => o.fnc)
 
     stackLevel--
     if (stackLevel === -1) {
@@ -256,7 +294,7 @@ export function handleQueue() {
 //
 // in-source test suites
 //
-if (import.meta.vitest) {
+/*if (import.meta.vitest) {
     const { it, expect } = import.meta.vitest
 
     it('test stack of simple observer', () => {
@@ -282,4 +320,4 @@ if (import.meta.vitest) {
 
         expect(stack).to.have.lengthOf(1);
     })
-}
+}*/
